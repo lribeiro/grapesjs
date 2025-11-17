@@ -295,12 +295,48 @@ export default {
     let x = 0;
     let y = 0;
 
+    const el = this.target.getEl();
+
     if (isTran && transform) {
       x = this.getTranslate(transform);
       y = this.getTranslate(transform, 'y');
     } else {
-      x = parseFloat(left ?? '0');
-      y = parseFloat(top ?? '0');
+      // Handle percentage values properly: e.g. "12%" should be
+      // converted to pixels according to the current containing block size
+      // (width for left, height for top). Default to parseFloat for px.
+      if (left && left.indexOf('%') >= 0 && el) {
+        try {
+          const perc = parseFloat(left);
+          const elComp = getComputedStyle(el as HTMLElement);
+          const parentEl =
+            elComp?.position === 'absolute' && (el as HTMLElement).offsetParent && (el as HTMLElement).offsetParent?.tagName !== 'BODY'
+              ? ((el as HTMLElement).offsetParent as HTMLElement)
+              : (el as HTMLElement).parentElement;
+          const parentWidth = (parentEl?.offsetWidth as number) || 1;
+          x = (perc / 100) * parentWidth;
+        } catch (e) {
+          x = parseFloat(left ?? '0');
+        }
+      } else {
+        x = parseFloat(left ?? '0');
+      }
+
+      if (top && top.indexOf('%') >= 0 && el) {
+        try {
+          const perc = parseFloat(top);
+          const elComp = getComputedStyle(el as HTMLElement);
+          const parentEl =
+            elComp?.position === 'absolute' && (el as HTMLElement).offsetParent && (el as HTMLElement).offsetParent?.tagName !== 'BODY'
+              ? ((el as HTMLElement).offsetParent as HTMLElement)
+              : (el as HTMLElement).parentElement;
+          const parentHeight = (parentEl?.offsetHeight as number) || 1;
+          y = (perc / 100) * parentHeight;
+        } catch (e) {
+          y = parseFloat(top ?? '0');
+        }
+      } else {
+        y = parseFloat(top ?? '0');
+      }
     }
 
     return { x, y };
