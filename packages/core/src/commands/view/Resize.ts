@@ -154,13 +154,16 @@ export default {
         let currentWidth = modelStyle[keyWidth!] as string;
         config.autoWidth = keepAutoWidth && currentWidth === 'auto';
         if (isNaN(parseFloat(currentWidth))) {
-          currentWidth = elComputedStyle[keyWidth as any];
+          // Prefer an inline style if present so we can keep units like '%'
+          // Note: getComputedStyle() returns resolved pixel values for many browsers
+          currentWidth = (el as HTMLElement).style?.[keyWidth as any] || elComputedStyle[keyWidth as any];
         }
 
         let currentHeight = modelStyle[keyHeight!] as string;
         config.autoHeight = keepAutoHeight && currentHeight === 'auto';
         if (isNaN(parseFloat(currentHeight))) {
-          currentHeight = elComputedStyle[keyHeight as any];
+          // Prefer an inline style if present so we can keep units like '%'
+          currentHeight = (el as HTMLElement).style?.[keyHeight as any] || elComputedStyle[keyHeight as any];
         }
 
         const valueWidth = parseFloat(currentWidth);
@@ -356,7 +359,14 @@ export default {
       }
       case ConvertUnitsToPx.perc: {
         const { parentElement, offsetParent } = el;
-        const parentEl = elComputedStyle?.position === 'absolute' ? (offsetParent as HTMLElement) : parentElement;
+        // When element is absolutely positioned prefer the offsetParent (positioned ancestor),
+        // otherwise use the direct parent element. If offsetParent is BODY, fall back to parentElement
+        // to avoid using the whole document as reference: 
+        // https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/offsetParent
+        const parentEl =
+          elComputedStyle?.position === 'absolute' && offsetParent && offsetParent.tagName !== 'BODY'
+            ? (offsetParent as HTMLElement)
+            : parentElement;
         const parentWidth = parentEl?.offsetWidth || 1;
         const parentHeight = parentEl?.offsetHeight || 1;
         const parentSize = isHeight ? parentHeight : parentWidth;

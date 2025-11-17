@@ -430,6 +430,12 @@ export default class Resizer {
    * @return {HTMLElement}
    */
   getParentEl() {
+    // Prefer offsetParent when present and meaningful (not the body element)
+    // This helps with absolute/designer mode where the containing element
+    // might be a positioned ancestor (eg. position: relative)
+    const offParent = this.el?.offsetParent as HTMLElement | null;
+    if (offParent && offParent.tagName !== 'BODY') return offParent;
+
     return this.el?.parentElement;
   }
 
