@@ -791,8 +791,11 @@ export default class Resizer {
     const { offsetParent } = el;
 
     // Check if the parent or any ancestor has `position: relative`, `absolute`, `fixed`, or `sticky`
+    // Use avoidFrameZoom and avoidFrameOffset to match the coordinate system used for startDim
+    // (set in start() with the same flags), so that the subtraction in calc() produces correct
+    // relative positions for CSS top/left in absolute mode.
     if (offsetParent && offsetParent.tagName !== 'BODY') {
-      parentRect = this.getElementPos(offsetParent as HTMLElement);
+      parentRect = this.getElementPos(offsetParent as HTMLElement, { avoidFrameZoom: true, avoidFrameOffset: true });
     }
 
     return parentRect;

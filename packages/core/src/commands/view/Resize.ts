@@ -367,8 +367,11 @@ export default {
           elComputedStyle?.position === 'absolute' && offsetParent && offsetParent.tagName !== 'BODY'
             ? (offsetParent as HTMLElement)
             : parentElement;
-        const parentWidth = parentEl?.offsetWidth || 1;
-        const parentHeight = parentEl?.offsetHeight || 1;
+        const parentElStyle = parentEl ? win?.getComputedStyle(parentEl) : undefined;
+        const parentWidth =
+          parentEl?.offsetWidth || parseFloat(parentElStyle?.width || '0') || 1;
+        const parentHeight =
+          parentEl?.offsetHeight || parseFloat(parentElStyle?.height || '0') || 1;
         const parentSize = isHeight ? parentHeight : parentWidth;
         valueResult = (valuePx / parentSize) * 100;
         break;
