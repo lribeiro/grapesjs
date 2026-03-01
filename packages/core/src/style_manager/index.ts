@@ -68,9 +68,7 @@ import { PropertyTypes, StyleManagerEvents, StyleTarget } from './types';
 import { CustomPropertyView } from './view/PropertyView';
 import SectorsView from './view/SectorsView';
 
-export type { PropertyTypes, StyleModuleParam, StyleTarget } from './types';
-
-export type StyleManagerEvent = `${StyleManagerEvents}`;
+export type { PropertyTypes, StyleManagerEventCallback, StyleModuleParam, StyleTarget } from './types';
 
 const propDef = (value: any) => value || value === 0;
 
@@ -116,11 +114,11 @@ export default class StyleManager extends ItemManagerModule<
 
     // Triggers for the selection refresh and properties
     const eventCmpUpdate = ComponentsEvents.update;
-    const ev = `component:toggled ${eventCmpUpdate}:classes change:state change:device frame:resized selector:type`;
+    const ev = `${ComponentsEvents.toggled} ${eventCmpUpdate}:classes change:state change:device frame:resized selector:type`;
     this.upAll = debounce(() => this.__upSel(), 0);
     model.listenTo(em, ev, this.upAll as any);
     // Clear state target on any component selection change, without debounce (#4208)
-    model.listenTo(em, 'component:toggled', this.__clearStateTarget);
+    model.listenTo(em, ComponentsEvents.toggled, this.__clearStateTarget);
 
     // Triggers only for properties (avoid selection refresh)
     const upProps = debounce(() => {

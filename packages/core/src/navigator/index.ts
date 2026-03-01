@@ -47,8 +47,7 @@ import { hasWin, isComponent, isDef } from '../utils/mixins';
 import defConfig, { LayerManagerConfig } from './config/config';
 import { LayerData, LayerEvents } from './types';
 import View from './view/ItemView';
-
-export type LayerEvent = `${LayerEvents}`;
+export type { LayerEvent } from './types';
 
 const styleOpts = { mediaText: '' };
 
@@ -79,7 +78,7 @@ export default class LayerManager extends Module<LayerManagerConfig> {
 
   onLoad() {
     const { em, config, model } = this;
-    model.listenTo(em, 'component:selected', this.componentChanged);
+    model.listenTo(em, ComponentsEvents.selected, this.componentChanged);
     model.on('change:root', this.__onRootChange);
     model.listenTo(em, propsToListen, this.__onComponent);
     this.componentChanged();
@@ -180,7 +179,7 @@ export default class LayerManager extends Module<LayerManagerConfig> {
 
     component.setStyle(style, styleOpts as any);
     this.updateLayer(component);
-    this.em.trigger('component:toggled'); // Updates Style Manager #2938
+    this.em.trigger(ComponentsEvents.toggled); // Updates Style Manager #2938
   }
 
   /**

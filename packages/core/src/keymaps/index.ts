@@ -41,8 +41,7 @@ import keymaster from '../utils/keymaster';
 import { hasWin } from '../utils/mixins';
 import defConfig, { Keymap, KeymapOptions, KeymapsConfig } from './config';
 import { KeymapsEvents } from './types';
-
-export type KeymapEvent = `${KeymapsEvents}`;
+export type { KeymapEvent } from './types';
 
 hasWin() && keymaster.init(window);
 
@@ -118,7 +117,9 @@ export default class KeymapsModule extends Module<KeymapsConfig & { name?: strin
           opts.prevent && canvas.getCanvasView()?.preventDefault(e);
           isFunction(handlerRes) ? handlerRes(editor, 0, opt) : cmd.runCommand(handlerRes, opt);
           const args = [id, h.shortcut, e];
+          // @ts-ignore
           em.trigger(events.emit, ...args);
+          // @ts-ignore
           em.trigger(`${events.emitId}${id}`, ...args);
         }
       },

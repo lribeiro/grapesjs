@@ -46,6 +46,7 @@ import DataSourceManager from '../../data_sources';
 import { ComponentsEvents } from '../../dom_components/types';
 import { InitEditorConfig } from '../..';
 import { EditorEvents, SelectComponentOptions } from '../types';
+import type { EditorEvent, EditorEventCallbacks, EditorEventHandler } from '../types';
 
 Backbone.$ = $;
 
@@ -242,6 +243,25 @@ export default class EditorModel extends Model {
     return this.get('DataSources');
   }
 
+  on<E extends EditorEvent>(event: E, callback: EditorEventHandler<E>, context?: any) {
+    return super.on(event, callback, context);
+  }
+
+  once<E extends EditorEvent>(event: E, callback: EditorEventHandler<E>, context?: any) {
+    return super.once(event, callback, context);
+  }
+
+  off<E extends EditorEvent>(event?: E, callback?: EditorEventHandler<E>, context?: any) {
+    return super.off(event, callback, context);
+  }
+
+  trigger<E extends EditorEvent>(
+    event: E,
+    ...args: E extends keyof EditorEventCallbacks ? EditorEventCallbacks[E] : any[]
+  ) {
+    return super.trigger(event, ...args);
+  }
+
   constructor(conf: EditorConfig = {}) {
     super();
     this._config = conf;
@@ -284,11 +304,11 @@ export default class EditorModel extends Model {
     toLog.forEach((e) => this.listenLog(e as keyof typeof logs));
 
     // Deprecations
-    [{ from: 'change:selectedComponent', to: 'component:toggled' }].forEach((event) => {
+    [{ from: 'change:selectedComponent', to: ComponentsEvents.toggled }].forEach((event) => {
       const eventFrom = event.from;
       const eventTo = event.to;
       this.listenTo(this, eventFrom, (...args) => {
-        this.trigger(eventTo, ...args);
+        this.trigger(eventTo, ...(args as any));
         this.logWarning(`The event '${eventFrom}' is deprecated, replace it with '${eventTo}'`);
       });
     });
@@ -492,8 +512,8 @@ export default class EditorModel extends Model {
    * */
   componentHovered(editor: any, component: any, options: any) {
     const prev = this.previous('componentHovered');
-    prev && this.trigger('component:unhovered', prev, options);
-    component && this.trigger('component:hovered', component, options);
+    prev && this.trigger(ComponentsEvents.unhovered, prev, options);
+    component && this.trigger(ComponentsEvents.hovered, component, options);
   }
 
   /**
@@ -711,9 +731,8 @@ export default class EditorModel extends Model {
       return upHovered();
     }
 
-    const ev = 'component:hover';
     opts.forceChange && upHovered();
-    this.trigger(`${ev}:before`, cmp, opts);
+    this.trigger(ComponentsEvents.hoverBefore, cmp, opts);
 
     // Check for valid hoverable
     if (!cmp.get('hoverable')) {
@@ -728,7 +747,7 @@ export default class EditorModel extends Model {
 
     if (!opts.abort) {
       upHovered(cmp, opts);
-      this.trigger(ev, cmp, opts);
+      this.trigger(ComponentsEvents.hover, cmp, opts);
     }
   }
 

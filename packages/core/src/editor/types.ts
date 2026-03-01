@@ -1,35 +1,54 @@
-import { AssetEvent } from '../asset_manager/types';
-import { BlockEvent } from '../block_manager';
-import { BlocksEventCallback } from '../block_manager/types';
-import { CanvasEvent } from '../canvas';
-import { CommandEvent } from '../commands';
-import { LiteralUnion } from '../common';
+import { AssetEvent, AssetsEventCallback } from '../asset_manager/types';
+import { BlockEvent, BlocksEventCallback } from '../block_manager/types';
+import type { LiteralUnion, ObjectAny } from '../common';
+import { CanvasEvent, CanvasEventCallback } from '../canvas/types';
+import { CommandEvent, CommandsEventCallback } from '../commands/types';
 import { DataSourceEvent, DataSourcesEventCallback } from '../data_sources/types';
-import { ComponentEvent } from '../dom_components';
-import { KeymapEvent } from '../keymaps';
-import { ModalEvent } from '../modal_dialog';
-import { RichTextEditorEvent } from '../rich_text_editor';
-import { SelectorEvent } from '../selector_manager';
-import { StyleManagerEvent } from '../style_manager';
+import { DeviceEvent, DevicesEventCallback } from '../device_manager/types';
+import { ComponentEvent, ComponentsEventCallback } from '../dom_components/types';
+import { I18nEvent, I18nEventCallback } from '../i18n/types';
+import { KeymapEvent, KeymapsEventCallback } from '../keymaps/types';
+import { ModalEvent, ModalEventCallback } from '../modal_dialog/types';
+import { LayerEvent, LayerEventCallback } from '../navigator/types';
+import { PageEvent, PagesEventCallback } from '../pages/types';
+import { ParserEvent, ParserEventCallback } from '../parser/types';
+import { RichTextEditorEvent, RichTextEditorEventCallback } from '../rich_text_editor';
+import { SelectorEvent, SelectorEventCallback } from '../selector_manager/types';
+import type { ProjectData } from '../storage_manager';
+import { StorageEvent, StorageEventCallback } from '../storage_manager/types';
+import { StyleManagerEvent, StyleManagerEventCallback } from '../style_manager/types';
+import { TraitEvent, TraitEventCallback } from '../trait_manager/types';
 import { EditorConfig } from './config/config';
-import EditorModel from './model/Editor';
+import type EditorModel from './model/Editor';
+import type { EditorLoadOptions } from './model/Editor';
 
-type GeneralEvent = 'canvasScroll' | 'undo' | 'redo' | 'load' | 'update';
+type EditorLogEvent =
+  | `${EditorEvents.log}:${string}`
+  | `${EditorEvents.log}-${string}`
+  | `${EditorEvents.log}-${string}:${string}`;
+
+type EditorCoreEvent = `${EditorEvents}` | EditorLogEvent | 'canvasScroll';
 
 type EditorBuiltInEvents =
+  | EditorCoreEvent
   | DataSourceEvent
+  | DeviceEvent
+  | I18nEvent
   | ComponentEvent
   | BlockEvent
   | AssetEvent
   | KeymapEvent
+  | LayerEvent
+  | PageEvent
+  | ParserEvent
   | StyleManagerEvent
   | StorageEvent
   | CanvasEvent
   | SelectorEvent
   | RichTextEditorEvent
+  | TraitEvent
   | ModalEvent
-  | CommandEvent
-  | GeneralEvent;
+  | CommandEvent;
 
 export type EditorEvent = LiteralUnion<EditorBuiltInEvents, string>;
 
@@ -37,7 +56,64 @@ export type EditorConfigType = EditorConfig & { pStylePrefix?: string };
 
 export type EditorModelParam<T extends keyof EditorModel, N extends number> = Parameters<EditorModel[T]>[N];
 
-export interface EditorEventCallbacks extends BlocksEventCallback, DataSourcesEventCallback {
+export interface EditorProjectEventData {
+  project: ProjectData;
+  options: EditorLoadOptions;
+  initial: boolean;
+}
+
+export interface EditorProjectLoadEventData extends EditorProjectEventData {
+  loaded: boolean;
+}
+
+export interface EditorProjectGetEventData {
+  project: ProjectData;
+}
+
+export interface EditorLogEventOptions extends ObjectAny {
+  ns?: string;
+  level?: string;
+}
+
+export interface EditorEventCoreCallbacks {
+  [EditorEvents.update]: [];
+  [EditorEvents.updateBefore]: [Record<string, any>];
+  [EditorEvents.undo]: [];
+  [EditorEvents.redo]: [];
+  [EditorEvents.load]: [EditorModel['Editor']];
+  [EditorEvents.projectLoad]: [EditorProjectLoadEventData];
+  [EditorEvents.projectLoaded]: [EditorProjectEventData];
+  [EditorEvents.projectGet]: [EditorProjectGetEventData];
+  [EditorEvents.log]: [string, EditorLogEventOptions];
+  [EditorEvents.telemetryInit]: [];
+  [EditorEvents.destroy]: [];
+  [EditorEvents.destroyed]: [];
+  [key: `log:${string}`]: [string, EditorLogEventOptions];
+  [key: `log-${string}`]: [string, EditorLogEventOptions];
+  [key: `log-${string}:${string}`]: [string, EditorLogEventOptions];
+  canvasScroll: [];
+}
+
+export interface EditorEventCallbacks
+  extends EditorEventCoreCallbacks,
+    AssetsEventCallback,
+    BlocksEventCallback,
+    CanvasEventCallback,
+    CommandsEventCallback,
+    DataSourcesEventCallback,
+    DevicesEventCallback,
+    ComponentsEventCallback,
+    I18nEventCallback,
+    KeymapsEventCallback,
+    LayerEventCallback,
+    ModalEventCallback,
+    PagesEventCallback,
+    ParserEventCallback,
+    RichTextEditorEventCallback,
+    SelectorEventCallback,
+    StorageEventCallback,
+    StyleManagerEventCallback,
+    TraitEventCallback {
   [key: string]: any[];
 }
 

@@ -16,7 +16,7 @@ import {
 import { getComponentView, getElement, getUiClass } from '../../utils/mixins';
 import Canvas from '../model/Canvas';
 import Frame from '../model/Frame';
-import { GetBoxRectOptions, ToWorldOption } from '../types';
+import { CanvasEvents, GetBoxRectOptions, ToWorldOption } from '../types';
 import FrameView from './FrameView';
 import FramesView from './FramesView';
 import { ComponentsEvents } from '../../dom_components/types';
@@ -98,7 +98,7 @@ export default class CanvasView extends ModuleView<Canvas> {
     this.clsUnscale = `${pfx}unscale`;
     this._initFrames();
     this.listenTo(em, events.refresh, this.clearOff);
-    this.listenTo(em, 'component:selected', this.checkSelected);
+    this.listenTo(em, ComponentsEvents.selected, this.checkSelected);
     this.listenTo(em, `${events.coords} ${events.zoom}`, this.updateFrames);
     this.listenTo(model, 'change:frames', this._onFramesUpdate);
     this.toggleListeners(true);
@@ -242,7 +242,7 @@ export default class CanvasView extends ModuleView<Canvas> {
     this.updateFramesArea();
     this.clearOff();
     toolsWrpEl.style.display = 'none';
-    em.trigger('canvas:update', ev);
+    em.trigger(CanvasEvents.update, ev);
     clearTimeout(this.timerZoom);
     this.timerZoom = setTimeout(() => {
       em.stopDefault(defOpts);

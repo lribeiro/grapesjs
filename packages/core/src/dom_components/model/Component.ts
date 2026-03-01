@@ -1,36 +1,62 @@
+import { Model, ModelDestroyOptions } from 'backbone';
 import {
-  isUndefined,
-  isFunction,
-  isArray,
-  isEmpty,
-  isBoolean,
-  has,
-  isString,
-  forEach,
-  result,
   bindAll,
+  forEach,
+  has,
+  isArray,
+  isBoolean,
+  isEmpty,
+  isFunction,
+  isString,
+  isUndefined,
   keys,
+  result,
 } from 'underscore';
-import {
-  shallowDiff,
-  capitalize,
-  isEmptyObj,
-  isObject,
-  toLowerCase,
-  escapeAltQuoteAttrValue,
-  escapeAttrValue,
-} from '../../utils/mixins';
+import Frame from '../../canvas/model/Frame';
+import { AddOptions, ExtractMethods, ObjectAny, PrevToNewIdMap, SetOptions } from '../../common';
+import CssRule, { CssRuleJSON } from '../../css_composer/model/CssRule';
+import { DataCollectionStateMap } from '../../data_sources/model/data_collection/types';
+import { DataCollectionKeys } from '../../data_sources/types';
+import { checkAndGetSyncableCollectionItemId } from '../../data_sources/utils';
 import StyleableModel, {
   GetStyleOpts,
   StyleProps,
   UpdateStyleOptions,
 } from '../../domain_abstract/model/StyleableModel';
-import { Model, ModelDestroyOptions } from 'backbone';
-import Components from './Components';
+import EditorModel from '../../editor/model/Editor';
+import ItemView from '../../navigator/view/ItemView';
 import Selector from '../../selector_manager/model/Selector';
 import Selectors from '../../selector_manager/model/Selectors';
+import Trait from '../../trait_manager/model/Trait';
 import Traits from '../../trait_manager/model/Traits';
-import EditorModel from '../../editor/model/Editor';
+import { TraitProperties } from '../../trait_manager/types';
+import {
+  capitalize,
+  escapeAltQuoteAttrValue,
+  escapeAttrValue,
+  isEmptyObj,
+  isObject,
+  shallowDiff,
+  toLowerCase,
+} from '../../utils/mixins';
+import { DomComponentsConfig } from '../config/config';
+import { ActionLabelComponents, ComponentsEvents } from '../types';
+import ComponentView from '../view/ComponentView';
+import Components from './Components';
+import { DataWatchersOptions } from './ModelResolverWatcher';
+import {
+  getSymbolInstances,
+  getSymbolMain,
+  getSymbolsToUpdate,
+  initSymbol,
+  isSymbol,
+  isSymbolMain,
+  isSymbolRoot,
+  updateSymbolCls,
+  updateSymbolComps,
+  updateSymbolProps,
+} from './SymbolUtils';
+import { ToolbarButtonProps } from './ToolbarButton';
 import {
   ComponentAdd,
   ComponentDefinition,
@@ -42,36 +68,15 @@ import {
   SymbolToUpOptions,
   ToHTMLOptions,
 } from './types';
-import Frame from '../../canvas/model/Frame';
-import { DomComponentsConfig } from '../config/config';
-import ComponentView from '../view/ComponentView';
-import { AddOptions, ExtractMethods, ObjectAny, PrevToNewIdMap, SetOptions } from '../../common';
-import CssRule, { CssRuleJSON } from '../../css_composer/model/CssRule';
-import Trait from '../../trait_manager/model/Trait';
-import { ToolbarButtonProps } from './ToolbarButton';
-import { TraitProperties } from '../../trait_manager/types';
-import { ActionLabelComponents, ComponentsEvents } from '../types';
-import ItemView from '../../navigator/view/ItemView';
-import {
-  getSymbolMain,
-  getSymbolInstances,
-  initSymbol,
-  isSymbol,
-  isSymbolMain,
-  isSymbolRoot,
-  updateSymbolCls,
-  updateSymbolComps,
-  updateSymbolProps,
-  getSymbolsToUpdate,
-} from './SymbolUtils';
-import { DataWatchersOptions } from './ModelResolverWatcher';
-import { DataCollectionStateMap } from '../../data_sources/model/data_collection/types';
-import { checkAndGetSyncableCollectionItemId } from '../../data_sources/utils';
-import { keyRootData } from '../constants';
 
 export interface IComponent extends ExtractMethods<Component> {}
 export interface SetAttrOptions extends SetOptions, UpdateStyleOptions, DataWatchersOptions {}
 export interface ComponentSetOptions extends SetOptions, DataWatchersOptions {}
+export interface CheckIdOptions {
+  keepIds?: string[];
+  idMap?: PrevToNewIdMap;
+  updatedIds?: Record<string, ComponentDefinitionDefined[]>;
+}
 
 const escapeRegExp = (str: string) => {
   return str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
@@ -79,7 +84,7 @@ const escapeRegExp = (str: string) => {
 
 export const avoidInline = (em: EditorModel) => !!em?.getConfig().avoidInlineStyle;
 
-export const eventDrag = 'component:drag';
+export const eventDrag = ComponentsEvents.drag;
 export const keySymbols = '__symbols';
 export const keySymbol = '__symbol';
 export const keySymbolOvrd = '__symbol_ovrd';
@@ -316,7 +321,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     };
     const attrs = this.dataResolverWatchers.getValueOrResolver('attributes', defaultAttrs);
     this.setAttributes(attrs);
-    this.ccid = Component.createId(this, opt);
+    this.ccid = Component.createId(this, opt as any);
     this.preInit();
     this.initClasses();
     this.initComponents();
@@ -446,7 +451,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     this.emitWithEditor(ComponentsEvents.styleUpdate, this, pros);
     styleKeys.forEach((key) => this.emitWithEditor(`${ComponentsEvents.styleUpdateProperty}${key}`, this, pros));
 
-    const parentCollectionIds = Object.keys(collectionsStateMap).filter((key) => key !== keyRootData);
+    const parentCollectionIds = Object.keys(collectionsStateMap).filter((key) => key !== DataCollectionKeys.rootData);
 
     if (parentCollectionIds.length === 0) return;
 
@@ -1043,7 +1048,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const resolvedAttributes = this.dataResolverWatchers.getValueOrResolver('attributes', attrs);
     traits.length && this.setAttributes(resolvedAttributes);
     this.on(event, this.initTraits);
-    changed && em && em.trigger('component:toggled');
+    changed && em && em.trigger(ComponentsEvents.toggled);
     return this;
   }
 
@@ -1305,7 +1310,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
   updateTrait(id: string, props: Partial<TraitProperties>) {
     const trait = this.getTrait(id);
     trait && trait.set(props);
-    this.em?.trigger('component:toggled');
+    this.em?.trigger(ComponentsEvents.toggled);
     return this;
   }
 
@@ -1336,7 +1341,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
     const toRemove = ids.map((id) => this.getTrait(id));
     const { traits } = this;
     const removed = toRemove.length ? traits.remove(toRemove) : [];
-    this.em?.trigger('component:toggled');
+    this.em?.trigger(ComponentsEvents.toggled);
     return isArray(removed) ? removed : [removed];
   }
 
@@ -1356,7 +1361,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
   addTrait(trait: Parameters<Traits['add']>[0], opts: AddOptions = {}) {
     this.__loadTraits();
     const added = this.traits.add(trait, opts);
-    this.em?.trigger('component:toggled');
+    this.em?.trigger(ComponentsEvents.toggled);
     return isArray(added) ? added : [added];
   }
 
@@ -1462,7 +1467,7 @@ export default class Component extends StyleableModel<ComponentProperties> {
       }
     }
 
-    const event = 'component:clone';
+    const event = ComponentsEvents.clone;
     em && em.trigger(event, cloned);
     this.trigger(event, cloned);
 
@@ -2062,34 +2067,69 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   static ensureInList(model: Component) {
     const list = Component.getList(model);
-    const id = model.getId();
+    const propId = model.id as string | undefined;
+    const id = propId || model.getId();
     const current = list[id];
 
     if (!current) {
-      // Insert in list
       list[id] = model;
     } else if (current !== model) {
-      // Create new ID
+      const keepIdsCrossPages = model.em?.Components.config.keepAttributeIdsCrossPages;
+      const currentPage = current.page;
+      const modelPage = model.page;
+      const samePage = !!currentPage && !!modelPage && currentPage === modelPage;
       const nextId = Component.getIncrementId(id, list);
-      model.setId(nextId);
+
+      if (samePage || !keepIdsCrossPages) {
+        model.setId(nextId);
+      } else {
+        model.set({ id: nextId });
+      }
+
       list[nextId] = model;
     }
 
     model.components().forEach((i) => Component.ensureInList(i));
   }
 
-  static createId(model: Component, opts: any = {}) {
+  static createId(model: Component, opts: CheckIdOptions = {}) {
     const list = Component.getList(model);
+    const keepIdsCrossPages = model.em?.Components.config.keepAttributeIdsCrossPages;
     const { idMap = {} } = opts;
-    let { id } = model.get('attributes')!;
-    let nextId;
+    const attrs = model.get('attributes') || {};
+    const attrId = attrs.id as string | undefined;
+    const propId = model.id as string | undefined;
+    const currentId = propId ?? attrId;
+    let nextId: string;
 
-    if (id) {
-      nextId = Component.getIncrementId(id, list, opts);
-      model.setId(nextId);
-      if (id !== nextId) idMap[id] = nextId;
+    if (propId) {
+      nextId = Component.getIncrementId(propId, list, opts);
+      if (nextId !== propId) {
+        model.set({ id: nextId });
+      }
+    } else if (attrId) {
+      const existing = list[attrId] as Component | undefined;
+
+      if (!existing || existing === model) {
+        nextId = attrId;
+      } else {
+        const existingPage = existing.page;
+        const newPage = model.page;
+        const samePage = !!existingPage && !!newPage && existingPage === newPage;
+        nextId = Component.getIncrementId(attrId, list, opts);
+
+        if (samePage || !keepIdsCrossPages) {
+          model.setId(nextId);
+        } else {
+          model.set({ id: nextId });
+        }
+      }
     } else {
       nextId = Component.getNewId(list);
+    }
+
+    if (!!currentId && currentId !== nextId) {
+      idMap[currentId] = nextId;
     }
 
     list[nextId] = model;
@@ -2098,7 +2138,6 @@ export default class Component extends StyleableModel<ComponentProperties> {
 
   static getNewId(list: ObjectAny) {
     const count = Object.keys(list).length;
-    // Testing 1000000 components with `+ 2` returns 0 collisions
     const ilen = count.toString().length + 2;
     const uid = (Math.random() + 1.1).toString(36).slice(-ilen);
     let newId = `i${uid}`;
@@ -2126,20 +2165,14 @@ export default class Component extends StyleableModel<ComponentProperties> {
   }
 
   static getList(model: Component) {
-    const { em } = model;
-    const dm = em?.Components;
-    return dm?.componentsById ?? {};
+    return model.em?.Components?.componentsById ?? {};
   }
 
   static checkId(
     components: ComponentDefinitionDefined | ComponentDefinitionDefined[],
     styles: CssRuleJSON[] = [],
     list: ObjectAny = {},
-    opts: {
-      keepIds?: string[];
-      idMap?: PrevToNewIdMap;
-      updatedIds?: Record<string, ComponentDefinitionDefined[]>;
-    } = {},
+    opts: CheckIdOptions = {},
   ) {
     opts.updatedIds = opts.updatedIds || {};
     const comps = isArray(components) ? components : [components];

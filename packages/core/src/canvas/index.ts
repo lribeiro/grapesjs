@@ -138,7 +138,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
    */
   getDocument() {
     const frame = this.getFrameEl();
-    return frame?.contentDocument as Document;
+    return frame?.contentDocument;
   }
 
   /**
@@ -566,7 +566,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
    * @returns {Boolean}
    */
   hasFocus() {
-    return this.getDocument().hasFocus();
+    return !!this.getDocument()?.hasFocus?.();
   }
 
   /**
@@ -911,7 +911,7 @@ export default class CanvasModule extends Module<CanvasConfig> {
 
     if (opts.spots || opts.all) {
       this.refreshSpots();
-      em.trigger('canvas:updateTools'); // this should be deprecated
+      em.trigger(CanvasEvents.updateTools); // this should be deprecated
     }
 
     em.set('canvasOffset', this.getOffset()); // this should be deprecated

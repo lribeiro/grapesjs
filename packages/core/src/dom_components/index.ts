@@ -131,24 +131,7 @@ import ComponentView, { IComponentView } from './view/ComponentView';
 import ComponentWrapperView from './view/ComponentWrapperView';
 import ComponentsView from './view/ComponentsView';
 
-export type ComponentEvent =
-  | 'component:create'
-  | 'component:mount'
-  | 'component:add'
-  | 'component:remove'
-  | 'component:remove:before'
-  | 'component:clone'
-  | 'component:update'
-  | 'component:styleUpdate'
-  | 'component:selected'
-  | 'component:deselected'
-  | 'component:toggled'
-  | 'component:type:add'
-  | 'component:type:update'
-  | 'component:drag:start'
-  | 'component:drag'
-  | 'component:drag:end'
-  | 'component:resize';
+export type { ComponentEvent } from './types';
 
 export interface ComponentModelDefinition extends IComponent {
   defaults?: ComponentDefinition | (() => ComponentDefinition);
@@ -634,8 +617,8 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
       em.Blocks.add(blockProps.id || type, blockProps);
     }
 
-    const event = `component:type:${compType ? 'update' : 'add'}`;
-    em?.trigger(event, compType || methods);
+    const event = compType ? ComponentsEvents.typeUpdate : ComponentsEvents.typeAdd;
+    em?.trigger(event, (compType || methods) as any);
 
     return this;
   }
@@ -687,7 +670,7 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
       component.set({
         status: 'selected',
       });
-      ['component:selected', 'component:toggled'].forEach((event) => this.em.trigger(event, component, opts));
+      [ComponentsEvents.selected, ComponentsEvents.toggled].forEach((event) => this.em.trigger(event, component, opts));
     }
   }
 
@@ -698,7 +681,9 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
         status: '',
         state: '',
       });
-      ['component:deselected', 'component:toggled'].forEach((event) => this.em.trigger(event, component, opts));
+      [ComponentsEvents.deselected, ComponentsEvents.toggled].forEach((event) =>
+        this.em.trigger(event, component, opts),
+      );
     }
   }
 
@@ -775,7 +760,7 @@ export default class ComponentManager extends ItemManagerModule<DomComponentsCon
 
     const symbol = component.clone({ symbol: true });
     isSymbolMain(symbol) && this.symbols.add(symbol);
-    this.em.trigger('component:toggled');
+    this.em.trigger(ComponentsEvents.toggled);
 
     return symbol;
   }

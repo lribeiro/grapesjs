@@ -1,14 +1,8 @@
 import { Model } from '../../common';
-import { keyRootData } from '../../dom_components/constants';
 import EditorModel from '../../editor/model/Editor';
 import { DataComponentTypes } from '../types';
 import { isDataVariable } from '../utils';
-import {
-  DataCollectionStateMap,
-  DataCollectionState,
-  DataCollectionStateType,
-  RootDataType,
-} from './data_collection/types';
+import { DataCollectionState, DataCollectionStateMap, DataCollectionStateType } from './data_collection/types';
 
 export const DataVariableType = DataComponentTypes.variable as const;
 
@@ -156,53 +150,13 @@ export default class DataVariable extends Model<DataVariableProps> {
     ctx: DataVariableOptions,
   ) {
     const { collectionId = '', variableType, path, defaultValue = '' } = params;
-    const { em, collectionsStateMap } = ctx;
+    const { collectionsStateMap, em } = ctx;
+    const collectionItemState = collectionsStateMap?.[collectionId] as DataCollectionState | undefined;
 
-    if (!collectionsStateMap) return defaultValue;
+    if (!collectionItemState || !variableType) return defaultValue;
 
-    const collectionItem = collectionsStateMap[collectionId];
-    if (!collectionItem) return defaultValue;
-
-    if (collectionId === keyRootData) {
-      const root = collectionItem as RootDataType;
-      return path ? root?.[path as keyof RootDataType] : root;
-    }
-
-    if (!variableType) {
-      em.logError(`Missing collection variable type for collection: ${collectionId}`);
-      return defaultValue;
-    }
-
-    if (variableType === 'currentItem') {
-      return DataVariable.resolveCurrentItem(collectionItem as DataCollectionState, path, collectionId, em);
-    }
-
-    const state = collectionItem as DataCollectionState;
-    return state[variableType] ?? defaultValue;
-  }
-
-  private static resolveCurrentItem(
-    collectionItem: DataCollectionState,
-    path: string | undefined,
-    collectionId: string,
-    em: EditorModel,
-  ) {
-    const currentItem = collectionItem.currentItem;
-    if (!currentItem) {
-      em.logError(`Current item is missing for collection: ${collectionId}`);
-      return '';
-    }
-
-    if (currentItem.type === DataVariableType) {
-      const resolvedPath = currentItem.path ? `${currentItem.path}.${path}` : path;
-      return { type: DataVariableType, path: resolvedPath };
-    }
-
-    if (path && !(currentItem as any)[path]) {
-      em.logError(`Path not found in current item: ${path} for collection: ${collectionId}`);
-      return '';
-    }
-
-    return path ? (currentItem as any)[path] : currentItem;
+    return em.DataSources.getValue(`${variableType}${path ? `.${path}` : ''}`, defaultValue, {
+      context: collectionItemState,
+    });
   }
 }
