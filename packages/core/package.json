@@ -1,7 +1,7 @@
 {
   "name": "grapesjs",
   "description": "Free and Open Source Web Builder Framework",
-  "version": "0.22.14",
+  "version": "0.22.16",
   "author": "Artur Arseniev",
   "license": "BSD-3-Clause",
   "homepage": "http://grapesjs.com",
@@ -40,7 +40,7 @@
     "underscore": "1.13.1"
   },
   "devDependencies": {
-    "@types/markdown-it": "14.1.2",
+        "@types/markdown-it": "14.1.2",
     "@types/pretty": "^2.0.3",
     "grapesjs-cli": "workspace:^",
     "jest-environment-jsdom": "29.7.0",
@@ -78,6 +78,7 @@
     "start:js": "node node_modules/grapesjs-cli/dist/cli.js serve",
     "start:css": "npm run build:css -- --watch",
     "test": "jest --forceExit",
-    "test:dev": "jest --watch"
+    "test:dev": "jest --watch",
+    "release": "cp -rvf dist/* ../../../grapesjs_dist/dist/ && cp -rvf locale/* ../../../grapesjs_dist/locale/"
   }
 }
