@@ -122,6 +122,12 @@ export default {
     const resizeEventOpts = { component, el };
     let modelToStyle: StyleableModel;
     let elComputedStyle: CSSStyleDeclaration;
+    // Captured at resize-start; used in updateTarget to compute position deltas
+    // that are immune to any CSS transform applied on the element.
+    let startCSSTop = 0;
+    let startCSSLeft = 0;
+    let startVisualRelTop = 0;
+    let startVisualRelLeft = 0;
 
     const toggleBodyClass = (method: string, e: any, opts: any) => {
       const docs = opts.docs;
@@ -150,6 +156,16 @@ export default {
         elComputedStyle = getComputedStyle(el);
         const modelStyle = modelToStyle.getStyle();
         const rectStart = { ...resizer.startDim! };
+
+        // Save original CSS top/left (in px, from computedStyle which excludes transforms)
+        // and the element's starting visual position relative to its offset-parent.
+        // These are used in updateTarget to apply a pure delta so that a CSS transform on
+        // the element does not pollute the top/left style values.
+        startCSSTop = parseFloat(elComputedStyle['top']) || 0;
+        startCSSLeft = parseFloat(elComputedStyle['left']) || 0;
+        const parentRectAtStart = resizer.getParentRect();
+        startVisualRelTop = resizer.startDim!.t - parentRectAtStart.top;
+        startVisualRelLeft = resizer.startDim!.l - parentRectAtStart.left;
 
         let currentWidth = modelStyle[keyWidth!] as string;
         config.autoWidth = keepAutoWidth && currentWidth === 'auto';
@@ -267,8 +283,15 @@ export default {
         }
 
         if (!skipPositionUpdate && em.getDragMode(component)) {
-          style.top = `${rect.t}px`;
-          style.left = `${rect.l}px`;
+          // rect.t / rect.l are visual positions from getBoundingClientRect, which
+          // include any CSS transform on the element. We must not assign them directly
+          // to top/left (CSS positional properties are transform-agnostic).
+          // Instead, compute the visual delta from the start position and add it to
+          // the original CSS values so the transform offset is never double-counted.
+          const deltaTop = rect.t - startVisualRelTop;
+          const deltaLeft = rect.l - startVisualRelLeft;
+          style.top = `${startCSSTop + deltaTop}px`;
+          style.left = `${startCSSLeft + deltaLeft}px`;
         }
 
         let styleUpdated = false;
